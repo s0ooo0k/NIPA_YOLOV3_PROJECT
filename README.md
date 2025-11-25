@@ -9,6 +9,7 @@
 ### 1. 설치
 ```bash
 git clone https://github.com/s0ooo0k/NIPA_YOLOV3_PROJECT.git
+cd myyolo
 pip install -r requirements.txt
 ```
 
