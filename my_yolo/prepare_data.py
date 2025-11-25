@@ -131,10 +131,10 @@ def save_paths(image_paths, output_file, data_dir, use_relative=True):
     with open(output_file, 'w') as f:
         for img_path in image_paths:
             if use_relative:
-                # 상대 경로 계산 (data_dir 기준)
+                # 상대 경로 계산 (프로젝트 루트 기준 = data_dir의 부모)
                 try:
-                    rel_path = img_path.relative_to(data_dir)
-                    path_str = f"./{rel_path}"
+                    rel_path = img_path.relative_to(data_dir.parent)
+                    path_str = str(rel_path)
                 except ValueError:
                     # 상대 경로 계산 실패 시 절대 경로 사용
                     path_str = str(img_path.absolute())
