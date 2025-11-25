@@ -326,9 +326,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description='YOLOv3 Training')
 
     # Data
-    parser.add_argument('--train-path', type=str, default='../data/train.txt',
+    parser.add_argument('--train-path', type=str, default='data/train.txt',
                         help='Path to train.txt')
-    parser.add_argument('--val-path', type=str, default='../data/val.txt',
+    parser.add_argument('--val-path', type=str, default='data/val.txt',
                         help='Path to val.txt')
     parser.add_argument('--num-classes', type=int, default=25,
                         help='Number of classes')

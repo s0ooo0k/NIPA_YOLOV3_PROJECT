@@ -23,12 +23,7 @@ python -m my_yolo.prepare_data --config data/custom.yaml
 
 ### 3. 학습 시작
 ```bash
-python -m my_yolo.train \
-  --train-path data/train.txt \
-  --val-path data/val.txt \
-  --num-classes 25 \
-  --epochs 100 \
-  --batch-size 16
+python -m my_yolo.train
 ```
 
 ## 📁 프로젝트 구조
