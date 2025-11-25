@@ -8,7 +8,7 @@ from .neck import YOLONeck
 from .head import YOLOHead, YOLOv3Head
 from .model import YOLOv3, create_yolov3
 from .dataset import YOLODataset, get_anchors, ANCHORS
-from .dataloader import create_dataloaders, test_dataloader
+from .dataloader import create_dataloaders
 from .loss import YOLOv3Loss
 
 __all__ = [
@@ -23,7 +23,6 @@ __all__ = [
     'YOLODataset',
     'get_anchors',
     'ANCHORS',
-    'create_dataloaders',
-    'test_dataloader',
+    'create_dataloaders'
     'YOLOv3Loss',
 ]
