@@ -1,6 +1,7 @@
 # 데이터
 /data/images
 /data/labels
+*.txt
 
 # Python
 __pycache__/
