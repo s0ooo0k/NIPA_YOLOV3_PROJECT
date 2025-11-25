@@ -206,7 +206,8 @@ class YOLOv3Loss(nn.Module):
         loss_obj = self.bce_loss(pred_obj, obj_mask)
         loss_obj = (obj_mask * loss_obj).sum() * self.lambda_obj
 
-        loss_noobj = self.bce_loss(pred_obj, obj_mask)
+        # loss_noobj = self.bce_loss(pred_obj, obj_mask)
+        loss_noobj = self.bce_loss(pred_obj, torch.zeros_like(obj_mask))
         loss_noobj = (noobj_mask * loss_noobj).sum() * self.lambda_noobj
 
         obj_loss = loss_obj + loss_noobj

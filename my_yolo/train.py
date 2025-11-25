@@ -353,7 +353,8 @@ def parse_args():
                         help='Step size for StepLR scheduler')
 
     # Augmentation
-    parser.add_argument('--augment', action='store_true', default=True,
+    # parser.add_argument('--augment', action='store_true', default=True, help='Use data augmentation')
+    parser.add_argument('--augment', action='store_true', default=False,
                         help='Use data augmentation')
 
     # DataLoader
