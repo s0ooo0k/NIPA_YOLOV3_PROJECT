@@ -205,7 +205,7 @@ def parse_args():
     parser.add_argument(
         '--config',
         type=str,
-        default='../data/custom.yaml',
+        default='./data/custom.yaml',
         help='Path to dataset config YAML file'
     )
     parser.add_argument(
