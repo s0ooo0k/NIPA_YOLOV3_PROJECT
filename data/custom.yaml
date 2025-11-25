@@ -1,0 +1,32 @@
+train: ./train.txt
+val: ./val.txt
+
+nc: 25
+names:
+  [
+    "child",
+    "adult",
+    "stroller",
+    "bicycle",
+    "pm",
+    "umbrella",
+    "bus",
+    "truck",
+    "car",
+    "motorcycle",
+    "etc_vehicle",
+    "school_car_s",
+    "school_car_l",
+    "bollard",
+    "ped_signal",
+    "car_signal",
+    "fence",
+    "sign",
+    "sidewalk",
+    "crosswalk",
+    "speed_bump",
+    "road",
+    "lane",
+    "stop_line",
+    "center_line",
+  ]

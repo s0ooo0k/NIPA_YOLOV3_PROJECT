@@ -1,0 +1,17 @@
+# 데이터
+/data/images
+/data/labels
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# 학습 결과
+checkpoints/
+*.pth
+*.pt
+logs/
+
+# 시스템
+.DS_Store
