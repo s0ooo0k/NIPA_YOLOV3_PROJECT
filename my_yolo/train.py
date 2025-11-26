@@ -2,6 +2,7 @@ import os
 import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, StepLR
+from torch.amp import autocast, GradScaler
 from tqdm import tqdm
 import argparse
 from pathlib import Path
@@ -25,10 +26,16 @@ class Trainer:
         self.args = args
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+        # GPU 최적화 설정
+        if torch.cuda.is_available():
+            torch.backends.cudnn.benchmark = True
+            torch.backends.cudnn.enabled = True
+
         print(f"\n{'='*60}")
         print(f"YOLOv3 Training")
         print(f"{'='*60}")
         print(f"Device: {self.device}")
+        print(f"Mixed Precision: {args.use_amp}")
         print(f"Num classes: {args.num_classes}")
         print(f"Batch size: {args.batch_size}")
         print(f"Image size: {args.img_size}")
@@ -38,12 +45,22 @@ class Trainer:
 
         # 모델 초기화
         self.model = YOLOv3(num_classes=args.num_classes).to(self.device)
+
+        # torch.compile 사용 (PyTorch 2.0+, 선택적)
+        if args.use_compile and hasattr(torch, 'compile'):
+            print("Using torch.compile() for model optimization...")
+            self.model = torch.compile(self.model)
+
         print(f"Model created successfully!")
 
         # 파라미터 수 출력
         total_params, trainable_params = self.model.get_num_params()
         print(f"Total parameters: {total_params:,}")
         print(f"Trainable parameters: {trainable_params:,}\n")
+
+        # Mixed Precision Training - GradScaler
+        self.use_amp = args.use_amp and torch.cuda.is_available()
+        self.scaler = GradScaler('cuda') if self.use_amp else None
 
         # Loss 함수
         anchors = get_anchors()
@@ -122,19 +139,32 @@ class Trainer:
         pbar = tqdm(self.train_loader, desc=f"Epoch {epoch}/{self.args.epochs} [Train]")
 
         for batch_idx, (imgs, targets) in enumerate(pbar):
-            imgs = imgs.to(self.device)
-            targets = targets.to(self.device)
+            imgs = imgs.to(self.device, non_blocking=True)
+            targets = targets.to(self.device, non_blocking=True)
 
-            # Forward
-            predictions = self.model(imgs)
+            # Mixed Precision Training
+            if self.use_amp:
+                with autocast('cuda'):
+                    # Forward
+                    predictions = self.model(imgs)
+                    # Loss 계산
+                    loss, loss_components = self.criterion(predictions, targets)
 
-            # Loss 계산
-            loss, loss_components = self.criterion(predictions, targets)
+                # Backward with scaling
+                self.optimizer.zero_grad()
+                self.scaler.scale(loss).backward()
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+            else:
+                # Forward
+                predictions = self.model(imgs)
+                # Loss 계산
+                loss, loss_components = self.criterion(predictions, targets)
 
-            # Backward
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+                # Backward
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
 
             # Loss 누적
             total_loss += loss_components['total_loss']
@@ -182,14 +212,21 @@ class Trainer:
         pbar = tqdm(self.val_loader, desc=f"Epoch {epoch}/{self.args.epochs} [Val]")
 
         for imgs, targets in pbar:
-            imgs = imgs.to(self.device)
-            targets = targets.to(self.device)
+            imgs = imgs.to(self.device, non_blocking=True)
+            targets = targets.to(self.device, non_blocking=True)
 
-            # Forward
-            predictions = self.model(imgs)
-
-            # Loss 계산
-            loss, loss_components = self.criterion(predictions, targets)
+            # Mixed Precision Training
+            if self.use_amp:
+                with autocast('cuda'):
+                    # Forward
+                    predictions = self.model(imgs)
+                    # Loss 계산
+                    loss, loss_components = self.criterion(predictions, targets)
+            else:
+                # Forward
+                predictions = self.model(imgs)
+                # Loss 계산
+                loss, loss_components = self.criterion(predictions, targets)
 
             # Loss 누적
             total_loss += loss_components['total_loss']
@@ -248,8 +285,8 @@ class Trainer:
                   f"obj: {val_losses['obj_loss']:.4f}, "
                   f"cls: {val_losses['cls_loss']:.4f})")
 
-            # Checkpoint 저장
-            if epoch % self.args.save_interval == 0:
+            # Checkpoint 저장 (save_interval > 0일 때만)
+            if self.args.save_interval > 0 and epoch % self.args.save_interval == 0:
                 self.save_checkpoint(epoch, val_losses['total_loss'], is_best=False)
 
             # Best model 저장
@@ -283,6 +320,9 @@ class Trainer:
         if self.scheduler is not None:
             checkpoint['scheduler_state_dict'] = self.scheduler.state_dict()
 
+        if self.scaler is not None:
+            checkpoint['scaler_state_dict'] = self.scaler.state_dict()
+
         # Best model
         if is_best:
             best_path = self.checkpoint_dir / 'best.pt'
@@ -312,6 +352,9 @@ class Trainer:
 
         if self.scheduler is not None and 'scheduler_state_dict' in checkpoint:
             self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+
+        if self.scaler is not None and 'scaler_state_dict' in checkpoint:
+            self.scaler.load_state_dict(checkpoint['scaler_state_dict'])
 
         self.start_epoch = checkpoint['epoch']
         self.best_val_loss = checkpoint.get('best_val_loss', float('inf'))
@@ -365,9 +408,15 @@ def parse_args():
     parser.add_argument('--checkpoint-dir', type=str, default='./checkpoints',
                         help='Checkpoint directory')
     parser.add_argument('--save-interval', type=int, default=10,
-                        help='Save checkpoint every N epochs')
+                        help='Save checkpoint every N epochs (0 = only save best and last)')
     parser.add_argument('--resume', type=str, default='',
                         help='Resume from checkpoint')
+
+    # Optimization
+    parser.add_argument('--use-amp', action='store_true', default=True,
+                        help='Use mixed precision training (AMP)')
+    parser.add_argument('--use-compile', action='store_true', default=False,
+                        help='Use torch.compile() for model optimization (PyTorch 2.0+)')
 
     return parser.parse_args()
 
