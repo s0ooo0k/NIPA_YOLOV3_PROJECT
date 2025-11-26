@@ -41,7 +41,9 @@ def create_dataloaders(
         num_workers=num_workers,
         pin_memory=True,
         collate_fn=train_dataset.collate_fn,
-        drop_last=True
+        drop_last=True,
+        persistent_workers=True if num_workers > 0 else False,
+        prefetch_factor=2 if num_workers > 0 else None
     )
 
     # Validation Dataset & DataLoader
@@ -59,7 +61,9 @@ def create_dataloaders(
         num_workers=num_workers, # train과 같은 num_workers 사용
         pin_memory=True,
         collate_fn=val_dataset.collate_fn,
-        drop_last=False
+        drop_last=False,
+        persistent_workers=True if num_workers > 0 else False,
+        prefetch_factor=2 if num_workers > 0 else None
     )
 
     return train_loader, val_loader
